@@ -6,6 +6,8 @@ import shutil
 
 from rich.console import Console
 
+from httpx import ConnectError
+
 from mkdocs.config.defaults import MkDocsConfig
 from mkdocs.plugins import BasePlugin
 
@@ -173,7 +175,13 @@ class PlantUMLPlugin(BasePlugin[PlantUMLConfig]):
         ):
             to_request = self.storage.schemes()
             to_req_count = self.storage.count()
-            svgs = self.puml.translate(to_request.values())
+            try:
+                svgs = self.puml.translate(to_request.values())
+            # TODO: handle properly in puml.py request func, per diagram
+            except ConnectError:
+                svgs = []
+                self.console.print("[dim][bold magenta]mkdocs_puml[/bold magenta]: Failed to connect to puml server. No diagram was generated")
+                return env
             self.storage.update(zip(to_request.keys(), svgs))
 
             fallback_count = len([True for v in svgs if isinstance(v, Fallback)])
